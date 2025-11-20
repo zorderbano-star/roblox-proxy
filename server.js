@@ -5,10 +5,35 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000; 
 
-// IMPORTANT: In a real environment, replace '*' with your LP's domain (e.g., 'https://yourdomain.com')
+// IMPORTANT: Replace '*' with your LP's domain for production
 app.use(cors({ origin: '*', methods: 'GET' }));
+app.use(express.json()); // Middleware to parse JSON bodies
 
-// Helper to get User ID and Display Name from Username
+// --- NEW ENDPOINT: Get Display Name from User ID ---
+app.get('/getDisplayNameFromId', async (req, res) => {
+    const userId = req.query.userId;
+    if (!userId) return res.status(400).send({ error: "User ID required." });
+
+    try {
+        // Roblox API to get user details from ID
+        const response = await axios.get(`https://users.roblox.com/v1/users/${userId}`);
+
+        if (response.data && response.data.id) {
+            res.json({ 
+                userId: response.data.id, 
+                displayName: response.data.displayName,
+                username: response.data.name // The original username
+            });
+        } else {
+            res.status(404).send({ error: "User ID not found or invalid." });
+        }
+    } catch (error) {
+        // If Roblox returns 400 or 404, capture that.
+        res.status(500).send({ error: "API error fetching user details from ID." });
+    }
+});
+
+// --- EXISTING ENDPOINT: Get User ID from Username ---
 app.get('/getUserId', async (req, res) => {
     const username = req.query.username;
     if (!username) return res.status(400).send({ error: "Username required." });
@@ -31,7 +56,7 @@ app.get('/getUserId', async (req, res) => {
     }
 });
 
-// Helper to get Avatar URL from User ID
+// --- EXISTING ENDPOINT: Get Avatar URL from User ID ---
 app.get('/getAvatar', async (req, res) => {
     const userId = req.query.userId;
     if (!userId) return res.status(400).send({ error: "User ID required." });
